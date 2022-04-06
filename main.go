@@ -1,23 +1,31 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	//"k8s.io/client-go/kubernetes"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
+	"github.com/jamesorlakin/cert-manager-cpanel-dns-webhook/cpanel"
 	"github.com/jetstack/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
 	"github.com/jetstack/cert-manager/pkg/acme/webhook/cmd"
+	log "github.com/sirupsen/logrus"
 )
 
 var GroupName = os.Getenv("GROUP_NAME")
 
 func main() {
+	log.SetLevel(log.DebugLevel)
+	log.Info("cert-manager CPanel webhook solver starting")
 	if GroupName == "" {
-		panic("GROUP_NAME must be specified")
+		log.Panic("GROUP_NAME must be specified as an environment variable")
 	}
 
 	// This will register our custom DNS provider with the webhook serving
@@ -35,13 +43,7 @@ func main() {
 // To do so, it must implement the `github.com/jetstack/cert-manager/pkg/acme/webhook.Solver`
 // interface.
 type customDNSProviderSolver struct {
-	// If a Kubernetes 'clientset' is needed, you must:
-	// 1. uncomment the additional `client` field in this structure below
-	// 2. uncomment the "k8s.io/client-go/kubernetes" import at the top of the file
-	// 3. uncomment the relevant code in the Initialize method below
-	// 4. ensure your webhook's service account has the required RBAC role
-	//    assigned to it for interacting with the Kubernetes APIs you need.
-	//client kubernetes.Clientset
+	client *kubernetes.Clientset
 }
 
 // customDNSProviderConfig is a structure that is used to decode into when
@@ -59,13 +61,15 @@ type customDNSProviderSolver struct {
 // be used by your provider here, you should reference a Kubernetes Secret
 // resource and fetch these credentials using a Kubernetes clientset.
 type customDNSProviderConfig struct {
-	// Change the two fields below according to the format of the configuration
-	// to be decoded.
 	// These fields will be set by users in the
 	// `issuer.spec.acme.dns01.providers.webhook.config` field.
 
-	//Email           string `json:"email"`
-	//APIKeySecretRef v1alpha1.SecretKeySelector `json:"apiKeySecretRef"`
+	// The URL to a CPanel instance without a trailing slash, e.g. https://cpanel.mydomain.com
+	CpanelUrl string `json:"cpanelUrl"`
+
+	// A reference to a secret, in the form "namespace/secret-name"
+	// This secret should have data of 'username' and 'password'
+	SecretRef string `json:"secretRef"`
 }
 
 // Name is used as the name for this DNS solver when referencing it on the ACME
@@ -75,7 +79,7 @@ type customDNSProviderConfig struct {
 // within a single webhook deployment**.
 // For example, `cloudflare` may be used as the name of a solver.
 func (c *customDNSProviderSolver) Name() string {
-	return "my-custom-solver"
+	return "cpanel-solver"
 }
 
 // Present is responsible for actually presenting the DNS record with the
@@ -84,16 +88,14 @@ func (c *customDNSProviderSolver) Name() string {
 // cert-manager itself will later perform a self check to ensure that the
 // solver has correctly configured the DNS provider.
 func (c *customDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
-	cfg, err := loadConfig(ch.Config)
+	log.Infof("Got request to present: %v", ch)
+	cpanel, err := c.getDnsClient(ch)
 	if err != nil {
+		log.Error("Could not get cpanelClient")
 		return err
 	}
 
-	// TODO: do something more useful with the decoded configuration
-	fmt.Printf("Decoded configuration %v", cfg)
-
-	// TODO: add code that sets a record in the DNS provider's console
-	return nil
+	return cpanel.SetDnsTxt(ch.ResolvedFQDN, ch.Key)
 }
 
 // CleanUp should delete the relevant TXT record from the DNS provider console.
@@ -103,8 +105,14 @@ func (c *customDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 // This is in order to facilitate multiple DNS validations for the same domain
 // concurrently.
 func (c *customDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
-	// TODO: add code that deletes a record from the DNS provider's console
-	return nil
+	log.Infof("Got request to delete: %v", ch)
+	cpanel, err := c.getDnsClient(ch)
+	if err != nil {
+		log.Error("Could not get cpanelClient")
+		return err
+	}
+
+	return cpanel.ClearDnsTxt(ch.ResolvedFQDN, ch.Key)
 }
 
 // Initialize will be called when the webhook first starts.
@@ -117,18 +125,66 @@ func (c *customDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 // The stopCh can be used to handle early termination of the webhook, in cases
 // where a SIGTERM or similar signal is sent to the webhook process.
 func (c *customDNSProviderSolver) Initialize(kubeClientConfig *rest.Config, stopCh <-chan struct{}) error {
-	///// UNCOMMENT THE BELOW CODE TO MAKE A KUBERNETES CLIENTSET AVAILABLE TO
-	///// YOUR CUSTOM DNS PROVIDER
+	cl, err := kubernetes.NewForConfig(kubeClientConfig)
+	if err != nil {
+		log.Error("couldn't get Kubernetes clientset", err)
+		return err
+	}
 
-	//cl, err := kubernetes.NewForConfig(kubeClientConfig)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//c.client = cl
-
-	///// END OF CODE TO MAKE KUBERNETES CLIENTSET AVAILABLE
+	c.client = cl
 	return nil
+}
+
+// Lookup the secret in the config and get values out of it to construct a client instance
+func (c *customDNSProviderSolver) getDnsClient(ch *v1alpha1.ChallengeRequest) (*cpanel.CpanelClient, error) {
+	cfg, err := loadConfig(ch.Config)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Infof("Decoded webhook configuration %v", cfg)
+	if cfg.CpanelUrl == "" {
+		return nil, errors.New("dnsZone or cpanelUrl wasn't provided")
+	}
+	secretRefSplit := strings.Split(cfg.SecretRef, "/")
+	if len(secretRefSplit) != 2 {
+		return nil, errors.New("expected secretRef to be in the form namespace/name")
+	}
+	secretNamespace := secretRefSplit[0]
+	secretName := secretRefSplit[1]
+
+	log.Debugf("Fetching contents of secret %s from namespace %s", secretName, secretNamespace)
+	secret, err := c.client.CoreV1().Secrets(secretNamespace).Get(context.Background(), secretName, metav1.GetOptions{})
+	if err != nil {
+		log.Error("could not get secret", err)
+		return nil, err
+	}
+
+	usernameBytes, ok := secret.Data["username"]
+	if !ok {
+		err := errors.New("username field not present in secret")
+		log.Error(err)
+		return nil, err
+	}
+	passwordBytes, ok := secret.Data["password"]
+	if !ok {
+		err := errors.New("password field not present in secret")
+		log.Error(err)
+		return nil, err
+	}
+
+	username := string(usernameBytes)
+	password := string(passwordBytes)
+
+	log.Info("Got username and password from secret")
+
+	cpanel := &cpanel.CpanelClient{
+		DnsZone:   ch.ResolvedZone,
+		CpanelUrl: cfg.CpanelUrl,
+		Username:  username,
+		Password:  password,
+	}
+	return cpanel, nil
 }
 
 // loadConfig is a small helper function that decodes JSON configuration into
