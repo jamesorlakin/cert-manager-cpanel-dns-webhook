@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,6 +45,11 @@ func main() {
 // interface.
 type customDNSProviderSolver struct {
 	client *kubernetes.Clientset
+
+	// CPanel requires the zone serial in requests. This value could be sent in two requests concurrently
+	// but only one will win and actually be persisted in the zone file - there's no even an error back from CPanel.
+	// We therefore use this mutex to disallow concurrent requests to CPanel if multiple DNS names are given.
+	mutex sync.Mutex
 }
 
 // customDNSProviderConfig is a structure that is used to decode into when
@@ -89,13 +95,18 @@ func (c *customDNSProviderSolver) Name() string {
 // solver has correctly configured the DNS provider.
 func (c *customDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 	log.Infof("Got request to present: %v", ch)
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	log.Debugf("Presenting %v", ch)
 	cpanel, err := c.getDnsClient(ch)
 	if err != nil {
 		log.Error("Could not get cpanelClient")
 		return err
 	}
 
-	return cpanel.SetDnsTxt(ch.ResolvedFQDN, ch.Key)
+	err = cpanel.SetDnsTxt(ch.ResolvedFQDN, ch.Key)
+	log.Debugf("Present complete %v", ch)
+	return err
 }
 
 // CleanUp should delete the relevant TXT record from the DNS provider console.
@@ -105,14 +116,19 @@ func (c *customDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 // This is in order to facilitate multiple DNS validations for the same domain
 // concurrently.
 func (c *customDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
-	log.Infof("Got request to delete: %v", ch)
+	log.Infof("Got request to clean up: %v", ch)
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	log.Debugf("Deleting %v", ch)
 	cpanel, err := c.getDnsClient(ch)
 	if err != nil {
 		log.Error("Could not get cpanelClient")
 		return err
 	}
 
-	return cpanel.ClearDnsTxt(ch.ResolvedFQDN, ch.Key)
+	err = cpanel.ClearDnsTxt(ch.ResolvedFQDN, ch.Key)
+	log.Debugf("CleanUp complete %v", ch)
+	return err
 }
 
 // Initialize will be called when the webhook first starts.

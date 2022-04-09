@@ -99,7 +99,7 @@ func (c *CpanelClient) ClearDnsTxt(recordName string, value string) error {
 	}
 
 	if existingRecord == nil {
-		log.Error("Record not found - has it already been deleted? Pretending it was successful")
+		log.Warn("Record not found - has it already been deleted? Pretending it was successful")
 		return nil
 	} else {
 		log.Debugf("Record found with line no %d", existingRecord.LineIndex)
