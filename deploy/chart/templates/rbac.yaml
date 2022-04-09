@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ include "example-webhook.fullname" . }}
+  name: {{ include "cpanel-webhook.fullname" . }}
   labels:
-    app: {{ include "example-webhook.name" . }}
-    chart: {{ include "example-webhook.chart" . }}
+    app: {{ include "cpanel-webhook.name" . }}
+    chart: {{ include "cpanel-webhook.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 ---
@@ -14,11 +14,11 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: {{ include "example-webhook.fullname" . }}:webhook-authentication-reader
+  name: {{ include "cpanel-webhook.fullname" . }}:webhook-authentication-reader
   namespace: kube-system
   labels:
-    app: {{ include "example-webhook.name" . }}
-    chart: {{ include "example-webhook.chart" . }}
+    app: {{ include "cpanel-webhook.name" . }}
+    chart: {{ include "cpanel-webhook.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 roleRef:
@@ -28,7 +28,7 @@ roleRef:
 subjects:
   - apiGroup: ""
     kind: ServiceAccount
-    name: {{ include "example-webhook.fullname" . }}
+    name: {{ include "cpanel-webhook.fullname" . }}
     namespace: {{ .Release.Namespace }}
 ---
 # apiserver gets the auth-delegator role to delegate auth decisions to
@@ -36,10 +36,10 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "example-webhook.fullname" . }}:auth-delegator
+  name: {{ include "cpanel-webhook.fullname" . }}:auth-delegator
   labels:
-    app: {{ include "example-webhook.name" . }}
-    chart: {{ include "example-webhook.chart" . }}
+    app: {{ include "cpanel-webhook.name" . }}
+    chart: {{ include "cpanel-webhook.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 roleRef:
@@ -49,17 +49,17 @@ roleRef:
 subjects:
   - apiGroup: ""
     kind: ServiceAccount
-    name: {{ include "example-webhook.fullname" . }}
+    name: {{ include "cpanel-webhook.fullname" . }}
     namespace: {{ .Release.Namespace }}
 ---
 # Grant cert-manager permission to validate using our apiserver
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "example-webhook.fullname" . }}:domain-solver
+  name: {{ include "cpanel-webhook.fullname" . }}:domain-solver
   labels:
-    app: {{ include "example-webhook.name" . }}
-    chart: {{ include "example-webhook.chart" . }}
+    app: {{ include "cpanel-webhook.name" . }}
+    chart: {{ include "cpanel-webhook.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 rules:
@@ -73,16 +73,16 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "example-webhook.fullname" . }}:domain-solver
+  name: {{ include "cpanel-webhook.fullname" . }}:domain-solver
   labels:
-    app: {{ include "example-webhook.name" . }}
-    chart: {{ include "example-webhook.chart" . }}
+    app: {{ include "cpanel-webhook.name" . }}
+    chart: {{ include "cpanel-webhook.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ include "example-webhook.fullname" . }}:domain-solver
+  name: {{ include "cpanel-webhook.fullname" . }}:domain-solver
 subjects:
   - apiGroup: ""
     kind: ServiceAccount
@@ -92,7 +92,7 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "example-webhook.fullname" . }}:secret-reader
+  name: {{ include "cpanel-webhook.fullname" . }}:secret-reader
 rules:
   - apiGroups:
       - ""
@@ -100,33 +100,32 @@ rules:
       - "secrets"
     verbs:
       - "get"
-      # - "watch"
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "example-webhook.fullname" . }}:secret-reader
+  name: {{ include "cpanel-webhook.fullname" . }}:secret-reader
   namespace: {{ .Values.certManager.namespace | quote }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ include "example-webhook.fullname" . }}:secret-reader
+  name: {{ include "cpanel-webhook.fullname" . }}:secret-reader
 subjects:
   - apiGroup: ""
     kind: ServiceAccount
-    name: {{ include "example-webhook.fullname" . }}
+    name: {{ include "cpanel-webhook.fullname" . }}
     namespace: {{ .Values.certManager.namespace | quote }}
 ---
-# Grant example-webhook permission to read the flow control mechanism (APF)
+# Grant cpanel-webhook permission to read the flow control mechanism (APF)
 # API Priority and Fairness is enabled by default in Kubernetes 1.20
 # https://kubernetes.io/docs/concepts/cluster-administration/flow-control/
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "example-webhook.fullname" . }}:flowcontrol-solver
+  name: {{ include "cpanel-webhook.fullname" . }}:flowcontrol-solver
   labels:
-    app: {{ include "example-webhook.name" . }}
-    chart: {{ include "example-webhook.chart" . }}
+    app: {{ include "cpanel-webhook.name" . }}
+    chart: {{ include "cpanel-webhook.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 rules:
@@ -142,18 +141,18 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "example-webhook.fullname" . }}:flowcontrol-solver
+  name: {{ include "cpanel-webhook.fullname" . }}:flowcontrol-solver
   labels:
-    app: {{ include "example-webhook.name" . }}
-    chart: {{ include "example-webhook.chart" . }}
+    app: {{ include "cpanel-webhook.name" . }}
+    chart: {{ include "cpanel-webhook.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ include "example-webhook.fullname" . }}:flowcontrol-solver
+  name: {{ include "cpanel-webhook.fullname" . }}:flowcontrol-solver
 subjects:
   - apiGroup: ""
     kind: ServiceAccount
-    name: {{ include "example-webhook.fullname" . }}
+    name: {{ include "cpanel-webhook.fullname" . }}
     namespace: {{ .Values.certManager.namespace | quote }}

@@ -6,15 +6,15 @@
 # solve the DNS01 challenge.
 # This group name should be **unique**, hence using your own company's domain
 # here is recommended.
-groupName: acme.mycompany.com
+groupName: jameslakin.co.uk
 
 certManager:
   namespace: cert-manager
   serviceAccountName: cert-manager
 
 image:
-  repository: mycompany/webhook-image
-  tag: latest
+  repository: jamesorlakin/cert-manager-cpanel-dns-webhook
+  tag: v0.1
   pullPolicy: IfNotPresent
 
 nameOverride: ""

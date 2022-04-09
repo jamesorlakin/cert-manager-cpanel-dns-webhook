@@ -4,11 +4,11 @@
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
-  name: {{ include "example-webhook.selfSignedIssuer" . }}
+  name: {{ include "cpanel-webhook.selfSignedIssuer" . }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
-    app: {{ include "example-webhook.name" . }}
-    chart: {{ include "example-webhook.chart" . }}
+    app: {{ include "cpanel-webhook.name" . }}
+    chart: {{ include "cpanel-webhook.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
@@ -20,19 +20,19 @@ spec:
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: {{ include "example-webhook.rootCACertificate" . }}
+  name: {{ include "cpanel-webhook.rootCACertificate" . }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
-    app: {{ include "example-webhook.name" . }}
-    chart: {{ include "example-webhook.chart" . }}
+    app: {{ include "cpanel-webhook.name" . }}
+    chart: {{ include "cpanel-webhook.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
-  secretName: {{ include "example-webhook.rootCACertificate" . }}
+  secretName: {{ include "cpanel-webhook.rootCACertificate" . }}
   duration: 43800h # 5y
   issuerRef:
-    name: {{ include "example-webhook.selfSignedIssuer" . }}
-  commonName: "ca.example-webhook.cert-manager"
+    name: {{ include "cpanel-webhook.selfSignedIssuer" . }}
+  commonName: "ca.cpanel-webhook.cert-manager"
   isCA: true
 
 ---
@@ -41,16 +41,16 @@ spec:
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
-  name: {{ include "example-webhook.rootCAIssuer" . }}
+  name: {{ include "cpanel-webhook.rootCAIssuer" . }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
-    app: {{ include "example-webhook.name" . }}
-    chart: {{ include "example-webhook.chart" . }}
+    app: {{ include "cpanel-webhook.name" . }}
+    chart: {{ include "cpanel-webhook.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
   ca:
-    secretName: {{ include "example-webhook.rootCACertificate" . }}
+    secretName: {{ include "cpanel-webhook.rootCACertificate" . }}
 
 ---
 
@@ -58,19 +58,19 @@ spec:
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: {{ include "example-webhook.servingCertificate" . }}
+  name: {{ include "cpanel-webhook.servingCertificate" . }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
-    app: {{ include "example-webhook.name" . }}
-    chart: {{ include "example-webhook.chart" . }}
+    app: {{ include "cpanel-webhook.name" . }}
+    chart: {{ include "cpanel-webhook.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
-  secretName: {{ include "example-webhook.servingCertificate" . }}
+  secretName: {{ include "cpanel-webhook.servingCertificate" . }}
   duration: 8760h # 1y
   issuerRef:
-    name: {{ include "example-webhook.rootCAIssuer" . }}
+    name: {{ include "cpanel-webhook.rootCAIssuer" . }}
   dnsNames:
-  - {{ include "example-webhook.fullname" . }}
-  - {{ include "example-webhook.fullname" . }}.{{ .Release.Namespace }}
-  - {{ include "example-webhook.fullname" . }}.{{ .Release.Namespace }}.svc
+  - {{ include "cpanel-webhook.fullname" . }}
+  - {{ include "cpanel-webhook.fullname" . }}.{{ .Release.Namespace }}
+  - {{ include "cpanel-webhook.fullname" . }}.{{ .Release.Namespace }}.svc
