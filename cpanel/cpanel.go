@@ -109,7 +109,6 @@ func (c *CpanelClient) ClearDnsTxt(recordName string, value string) error {
 }
 
 func (c *CpanelClient) getZoneDetails() (*cpanelZoneResponse, error) {
-	// TODO: URL encode
 	req, err := http.NewRequest("GET", c.CpanelUrl+"/cpsess123/execute/DNS/parse_zone?zone="+url.QueryEscape(c.getDnsZoneNoDot()), nil)
 	if err != nil {
 		log.Error("zone info HTTP request error", err)
@@ -215,7 +214,6 @@ func (c *CpanelClient) createZoneRecord(serial string, recordName string, value 
 }
 
 func (c *CpanelClient) deleteZoneRecord(serial string, recordLineNo int) error {
-	// TODO: URL encode
 	url := c.CpanelUrl + "/cpsess123/execute/DNS/mass_edit_zone?zone=" + c.getDnsZoneNoDot() + "&serial=" + serial + "&remove=" + strconv.Itoa(recordLineNo)
 	log.Debugf("Using URL to delete: %s", url)
 
