@@ -5,7 +5,7 @@ A webhook DNS solver for cert-manager using the [CPanel UAPI](https://api.docs.c
 ## Getting started
 
 1. Install `cert-manager`. This was developed when running v1.8 but it should work reasonably across versions. This is assumed to be in the `cert-manager` namespace, if not you'll need to tweak the Helm values.
-2. Install this webhook. There's a Helm chart in `deploy/chart` (`helm install cpanel-webhook .`), or `kubectl apply https://raw.githubusercontent.com/jamesorlakin/cert-manager-cpanel-dns-webhook/master/deploy/v0.1.yaml`.
+2. Install this webhook. There's a Helm chart in `deploy/chart` (`helm install cpanel-webhook .`), or `kubectl apply https://raw.githubusercontent.com/jamesorlakin/cert-manager-cpanel-dns-webhook/master/deploy/v0.1.0.yaml`.
 3. Create a secret containing your CPanel credentials.
    ```yaml
     apiVersion: v1
