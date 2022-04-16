@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ include "cpanel-webhook.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
   labels:
     app: {{ include "cpanel-webhook.name" . }}
     chart: {{ include "cpanel-webhook.chart" . }}
