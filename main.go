@@ -94,10 +94,10 @@ func (c *customDNSProviderSolver) Name() string {
 // cert-manager itself will later perform a self check to ensure that the
 // solver has correctly configured the DNS provider.
 func (c *customDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
-	log.Infof("Got request to present: %v", ch)
+	log.Infof("Got request to present: %+v", ch)
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	log.Debugf("Presenting %v", ch)
+	log.Debugf("Presenting %+v", ch)
 	cpanel, err := c.getDnsClient(ch)
 	if err != nil {
 		log.Error("Could not get cpanelClient")
@@ -105,7 +105,7 @@ func (c *customDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 	}
 
 	err = cpanel.SetDnsTxt(ch.ResolvedFQDN, ch.Key)
-	log.Debugf("Present complete %v", ch)
+	log.Debugf("Present complete %+v", ch)
 	return err
 }
 
@@ -116,10 +116,10 @@ func (c *customDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 // This is in order to facilitate multiple DNS validations for the same domain
 // concurrently.
 func (c *customDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
-	log.Infof("Got request to clean up: %v", ch)
+	log.Infof("Got request to clean up: %+v", ch)
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	log.Debugf("Deleting %v", ch)
+	log.Debugf("Deleting %+v", ch)
 	cpanel, err := c.getDnsClient(ch)
 	if err != nil {
 		log.Error("Could not get cpanelClient")
@@ -127,7 +127,7 @@ func (c *customDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 	}
 
 	err = cpanel.ClearDnsTxt(ch.ResolvedFQDN, ch.Key)
-	log.Debugf("CleanUp complete %v", ch)
+	log.Debugf("CleanUp complete %+v", ch)
 	return err
 }
 
@@ -158,7 +158,7 @@ func (c *customDNSProviderSolver) getDnsClient(ch *v1alpha1.ChallengeRequest) (*
 		return nil, err
 	}
 
-	log.Infof("Decoded webhook configuration %v", cfg)
+	log.Infof("Decoded webhook configuration %+v", cfg)
 	if cfg.CpanelUrl == "" {
 		return nil, errors.New("dnsZone or cpanelUrl wasn't provided")
 	}
@@ -212,7 +212,7 @@ func loadConfig(cfgJSON *extapi.JSON) (customDNSProviderConfig, error) {
 		return cfg, nil
 	}
 	if err := json.Unmarshal(cfgJSON.Raw, &cfg); err != nil {
-		return cfg, fmt.Errorf("error decoding solver config: %v", err)
+		return cfg, fmt.Errorf("error decoding solver config: %+v", err)
 	}
 
 	return cfg, nil

@@ -30,14 +30,11 @@ func (c *CpanelClient) SetDnsTxt(recordName string, value string) error {
 	if err != nil {
 		return err
 	}
-	log.Debug("Got zone")
+	log.Infof("Got zone, record count: %d", len(zone.Data))
 
 	// Get the zone serial as it's needed for mutation
 	serial := getZoneSerial(zone)
 	log.Infof("Got SOA serial %s", serial)
-
-	// st, err := json.Marshal(zone)
-	// os.WriteFile("decode.json", st, 0644)
 
 	// Does the requested record already exist?
 	var existingRecord *cpanelZoneRecord
@@ -138,7 +135,7 @@ func (c *CpanelClient) getZoneDetails() (*cpanelZoneResponse, error) {
 	}
 
 	if len(zoneResponse.Errors) > 0 {
-		log.Errorf("zone JSON reported errors: %v", zoneResponse.Errors)
+		log.Errorf("zone JSON reported errors: %+v", zoneResponse.Errors)
 		return &zoneResponse, errors.New("zone JSON reported errors")
 	}
 
@@ -206,7 +203,7 @@ func (c *CpanelClient) createZoneRecord(serial string, recordName string, value 
 	}
 
 	if len(createResponse.Errors) > 0 {
-		log.Errorf("create JSON reported errors: %v", createResponse.Errors)
+		log.Errorf("create JSON reported errors: %+v", createResponse.Errors)
 		return errors.New("create JSON reported errors")
 	}
 
@@ -246,7 +243,7 @@ func (c *CpanelClient) deleteZoneRecord(serial string, recordLineNo int) error {
 	}
 
 	if len(createResponse.Errors) > 0 {
-		log.Errorf("delete JSON reported errors: %v", createResponse.Errors)
+		log.Errorf("delete JSON reported errors: %+v", createResponse.Errors)
 		return errors.New("delete JSON reported errors")
 	}
 
