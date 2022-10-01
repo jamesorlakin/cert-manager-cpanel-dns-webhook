@@ -74,7 +74,7 @@ func TestPresentCreate(t *testing.T) {
 
 	// Create
 	request := mockClient.requests[1] // Second request
-	expectedCreateUrl := `https://cpanel.test-domain.com/cpsess123/execute/DNS/mass_edit_zone?zone=test-domain.com&serial=2022040505&add=%7B%22dname%22%3A%22dummy%22%2C%22ttl%22%3A300%2C%22record_type%22%3A%22TXT%22%2C%22data%22%3A%5B%22test-value%22%5D%7D`
+	expectedCreateUrl := `https://cpanel.test-domain.com/execute/DNS/mass_edit_zone?zone=test-domain.com&serial=2022040505&add=%7B%22dname%22%3A%22dummy%22%2C%22ttl%22%3A300%2C%22record_type%22%3A%22TXT%22%2C%22data%22%3A%5B%22test-value%22%5D%7D`
 	assert.Equal(t, expectedCreateUrl, request.URL.String())
 	assert.NotEmpty(t, request.Header["Authorization"])
 }
@@ -125,7 +125,7 @@ func TestPresentNoCreate(t *testing.T) {
 	assert.Len(t, mockClient.requests, 1)
 
 	request := mockClient.requests[0]
-	expectedCreateUrl := `https://cpanel.test-domain.com/cpsess123/execute/DNS/parse_zone?zone=test-domain.com`
+	expectedCreateUrl := `https://cpanel.test-domain.com/execute/DNS/parse_zone?zone=test-domain.com`
 	assert.Equal(t, expectedCreateUrl, request.URL.String())
 	assert.NotEmpty(t, request.Header["Authorization"])
 }
@@ -189,7 +189,7 @@ func TestCleanupDelete(t *testing.T) {
 
 	// Delete
 	request := mockClient.requests[1]
-	expectedCreateUrl := `https://cpanel.test-domain.com/cpsess123/execute/DNS/mass_edit_zone?zone=test-domain.com&serial=2022040505&remove=18`
+	expectedCreateUrl := `https://cpanel.test-domain.com/execute/DNS/mass_edit_zone?zone=test-domain.com&serial=2022040505&remove=18`
 	assert.Equal(t, expectedCreateUrl, request.URL.String())
 	assert.NotEmpty(t, request.Header["Authorization"])
 }
