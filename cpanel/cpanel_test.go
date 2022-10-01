@@ -25,8 +25,7 @@ func (f *DummyHttp) RoundTrip(req *http.Request) (*http.Response, error) {
 	}, nil
 }
 
-func NewClientWithMock(mock *DummyHttp) CpanelClient {
-	return CpanelClient{
+const expectedUsernamePasswordAuthorization = "Basic dXNlcjpwYXNzd29yZA=="
 		DnsZone:   "test-domain.com.",
 		Username:  "user",
 		Password:  "password",
@@ -76,7 +75,7 @@ func TestPresentCreate(t *testing.T) {
 	request := mockClient.requests[1] // Second request
 	expectedCreateUrl := `https://cpanel.test-domain.com/execute/DNS/mass_edit_zone?zone=test-domain.com&serial=2022040505&add=%7B%22dname%22%3A%22dummy%22%2C%22ttl%22%3A300%2C%22record_type%22%3A%22TXT%22%2C%22data%22%3A%5B%22test-value%22%5D%7D`
 	assert.Equal(t, expectedCreateUrl, request.URL.String())
-	assert.NotEmpty(t, request.Header["Authorization"])
+	assert.Equal(t, expectedUsernamePasswordAuthorization, request.Header["Authorization"][0])
 }
 
 func TestPresentNoCreate(t *testing.T) {
@@ -127,7 +126,7 @@ func TestPresentNoCreate(t *testing.T) {
 	request := mockClient.requests[0]
 	expectedCreateUrl := `https://cpanel.test-domain.com/execute/DNS/parse_zone?zone=test-domain.com`
 	assert.Equal(t, expectedCreateUrl, request.URL.String())
-	assert.NotEmpty(t, request.Header["Authorization"])
+	assert.Equal(t, expectedUsernamePasswordAuthorization, request.Header["Authorization"][0])
 }
 
 func TestCleanupDelete(t *testing.T) {
@@ -191,7 +190,7 @@ func TestCleanupDelete(t *testing.T) {
 	request := mockClient.requests[1]
 	expectedCreateUrl := `https://cpanel.test-domain.com/execute/DNS/mass_edit_zone?zone=test-domain.com&serial=2022040505&remove=18`
 	assert.Equal(t, expectedCreateUrl, request.URL.String())
-	assert.NotEmpty(t, request.Header["Authorization"])
+	assert.Equal(t, expectedUsernamePasswordAuthorization, request.Header["Authorization"][0])
 }
 
 func TestCleanupNoDelete(t *testing.T) {
@@ -227,4 +226,5 @@ func TestCleanupNoDelete(t *testing.T) {
 
 	// Expect 1 request, only zone info
 	assert.Len(t, mockClient.requests, 1)
+	assert.Equal(t, expectedUsernamePasswordAuthorization, mockClient.requests[0].Header["Authorization"][0])
 }
