@@ -20,6 +20,7 @@ type CpanelClient struct {
 	CpanelUrl  string
 	Username   string
 	Password   string
+	ApiToken   string // An alternative to a password and takes precedence
 }
 
 func (c *CpanelClient) SetDnsTxt(recordName string, value string) error {
@@ -112,7 +113,7 @@ func (c *CpanelClient) getZoneDetails() (*cpanelZoneResponse, error) {
 		return nil, err
 	}
 
-	req.SetBasicAuth(c.Username, c.Password)
+	c.addRequestAuth(req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -180,7 +181,7 @@ func (c *CpanelClient) createZoneRecord(serial string, recordName string, value 
 		return err
 	}
 
-	req.SetBasicAuth(c.Username, c.Password)
+	c.addRequestAuth(req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -220,7 +221,7 @@ func (c *CpanelClient) deleteZoneRecord(serial string, recordLineNo int) error {
 		return err
 	}
 
-	req.SetBasicAuth(c.Username, c.Password)
+	c.addRequestAuth(req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -262,6 +263,19 @@ func (c *CpanelClient) getDnsZoneNoDot() string {
 	// CPanel API expects zone of 'my-domain.com', not 'my-domain.com.'
 	return strings.TrimSuffix(c.DnsZone, ".")
 }
+
+// Add either Basic auth for username/password or CPanel's own API Token mechanism
+func (c *CpanelClient) addRequestAuth(req *http.Request) {
+	if c.ApiToken != "" {
+		req.Header.Add("Authorization", "cpanel "+c.Username+":"+c.ApiToken)
+	} else {
+		req.SetBasicAuth(c.Username, c.Password)
+	}
+}
+
+// ----
+// Utils
+// ----
 
 // Get the SOA serial needed for mutating DNS zones.
 func getZoneSerial(zone *cpanelZoneResponse) string {

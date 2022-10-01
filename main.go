@@ -47,7 +47,7 @@ type customDNSProviderSolver struct {
 	client *kubernetes.Clientset
 
 	// CPanel requires the zone serial in requests. This value could be sent in two requests concurrently
-	// but only one will win and actually be persisted in the zone file - there's no even an error back from CPanel.
+	// but only one will win and actually be persisted in the zone file - there's not even an error back from CPanel.
 	// We therefore use this mutex to disallow concurrent requests to CPanel if multiple DNS names are given.
 	mutex sync.Mutex
 }
