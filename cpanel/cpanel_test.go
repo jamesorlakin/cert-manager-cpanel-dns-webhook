@@ -27,7 +27,7 @@ func (f *DummyHttp) RoundTrip(req *http.Request) (*http.Response, error) {
 
 func NewClientWithMock(mock *DummyHttp) CpanelClient {
 	return CpanelClient{
-		DnsZone:   "test-domain.com",
+		DnsZone:   "test-domain.com.",
 		Username:  "user",
 		Password:  "password",
 		CpanelUrl: "https://cpanel.test-domain.com",
@@ -66,7 +66,7 @@ func TestPresentCreate(t *testing.T) {
 	}
 	client := NewClientWithMock(&mockClient)
 
-	err := client.SetDnsTxt("dummy.test-domain.com", "test-value")
+	err := client.SetDnsTxt("dummy.test-domain.com.", "test-value")
 	assert.NoError(t, err)
 
 	// Expect 2 requests (one for zone info, one to create)
@@ -118,7 +118,7 @@ func TestPresentNoCreate(t *testing.T) {
 	}
 	client := NewClientWithMock(&mockClient)
 
-	err := client.SetDnsTxt("dummy.test-domain.com", "test-value")
+	err := client.SetDnsTxt("dummy.test-domain.com.", "test-value")
 	assert.NoError(t, err)
 
 	// Expect 1 request (only zone info, no create)
@@ -181,7 +181,7 @@ func TestCleanupDelete(t *testing.T) {
 	}
 	client := NewClientWithMock(&mockClient)
 
-	err := client.ClearDnsTxt("dummy.test-domain.com", "test-value")
+	err := client.ClearDnsTxt("dummy.test-domain.com.", "test-value")
 	assert.NoError(t, err)
 
 	// Expect 2 requests (zone info, delete)
@@ -222,7 +222,7 @@ func TestCleanupNoDelete(t *testing.T) {
 	}
 	client := NewClientWithMock(&mockClient)
 
-	err := client.ClearDnsTxt("dummy.test-domain.com", "test-value")
+	err := client.ClearDnsTxt("dummy.test-domain.com.", "test-value")
 	assert.NoError(t, err)
 
 	// Expect 1 request, only zone info
