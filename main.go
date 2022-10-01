@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	corev1 "k8s.io/api/core/v1"
 	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -176,29 +177,37 @@ func (c *customDNSProviderSolver) getDnsClient(ch *v1alpha1.ChallengeRequest) (*
 		return nil, err
 	}
 
+	client, err := CreateClientFromSecretValues(secret, ch.ResolvedZone, cfg.CpanelUrl)
+	return client, err
+}
+
+func CreateClientFromSecretValues(secret *corev1.Secret, dnsZone, cpanelUrl string) (*cpanel.CpanelClient, error) {
 	usernameBytes, ok := secret.Data["username"]
 	if !ok {
 		err := errors.New("username field not present in secret")
 		log.Error(err)
 		return nil, err
 	}
-	passwordBytes, ok := secret.Data["password"]
-	if !ok {
-		err := errors.New("password field not present in secret")
+	passwordBytes, passwordOk := secret.Data["password"]
+	apiTokenBytes, apiOk := secret.Data["apiToken"]
+	if !passwordOk && !apiOk {
+		err := errors.New("password or API token field not present in secret")
 		log.Error(err)
 		return nil, err
 	}
 
 	username := string(usernameBytes)
 	password := string(passwordBytes)
+	apiToken := string(apiTokenBytes)
 
-	log.Info("Got username and password from secret")
+	log.Info("Got credentials from secret")
 
 	cpanel := &cpanel.CpanelClient{
-		DnsZone:   ch.ResolvedZone,
-		CpanelUrl: cfg.CpanelUrl,
+		DnsZone:   dnsZone,
+		CpanelUrl: cpanelUrl,
 		Username:  username,
 		Password:  password,
+		ApiToken:  apiToken,
 	}
 	return cpanel, nil
 }

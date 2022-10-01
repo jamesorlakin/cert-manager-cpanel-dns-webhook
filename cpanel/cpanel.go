@@ -267,8 +267,10 @@ func (c *CpanelClient) getDnsZoneNoDot() string {
 // Add either Basic auth for username/password or CPanel's own API Token mechanism
 func (c *CpanelClient) addRequestAuth(req *http.Request) {
 	if c.ApiToken != "" {
+		log.Debug("Using API Token mechanism")
 		req.Header.Add("Authorization", "cpanel "+c.Username+":"+c.ApiToken)
 	} else {
+		log.Debug("No API token, falling back to HTTP Basic auth")
 		req.SetBasicAuth(c.Username, c.Password)
 	}
 }
