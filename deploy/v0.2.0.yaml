@@ -7,7 +7,7 @@ metadata:
   namespace: "cert-manager"
   labels:
     app: cpanel-webhook
-    chart: cpanel-webhook-0.1.0
+    chart: cpanel-webhook-0.2.0
     release: cpanel-webhook
     heritage: Helm
 ---
@@ -19,7 +19,7 @@ metadata:
   name: cpanel-webhook:domain-solver
   labels:
     app: cpanel-webhook
-    chart: cpanel-webhook-0.1.0
+    chart: cpanel-webhook-0.2.0
     release: cpanel-webhook
     heritage: Helm
 rules:
@@ -53,7 +53,7 @@ metadata:
   name: cpanel-webhook:flowcontrol-solver
   labels:
     app: cpanel-webhook
-    chart: cpanel-webhook-0.1.0
+    chart: cpanel-webhook-0.2.0
     release: cpanel-webhook
     heritage: Helm
 rules:
@@ -75,7 +75,7 @@ metadata:
   name: cpanel-webhook:auth-delegator
   labels:
     app: cpanel-webhook
-    chart: cpanel-webhook-0.1.0
+    chart: cpanel-webhook-0.2.0
     release: cpanel-webhook
     heritage: Helm
 roleRef:
@@ -95,7 +95,7 @@ metadata:
   name: cpanel-webhook:domain-solver
   labels:
     app: cpanel-webhook
-    chart: cpanel-webhook-0.1.0
+    chart: cpanel-webhook-0.2.0
     release: cpanel-webhook
     heritage: Helm
 roleRef:
@@ -131,7 +131,7 @@ metadata:
   name: cpanel-webhook:flowcontrol-solver
   labels:
     app: cpanel-webhook
-    chart: cpanel-webhook-0.1.0
+    chart: cpanel-webhook-0.2.0
     release: cpanel-webhook
     heritage: Helm
 roleRef:
@@ -155,7 +155,7 @@ metadata:
   namespace: kube-system
   labels:
     app: cpanel-webhook
-    chart: cpanel-webhook-0.1.0
+    chart: cpanel-webhook-0.2.0
     release: cpanel-webhook
     heritage: Helm
 roleRef:
@@ -176,7 +176,7 @@ metadata:
   namespace: "cert-manager"
   labels:
     app: cpanel-webhook
-    chart: cpanel-webhook-0.1.0
+    chart: cpanel-webhook-0.2.0
     release: cpanel-webhook
     heritage: Helm
 spec:
@@ -198,7 +198,7 @@ metadata:
   namespace: "cert-manager"
   labels:
     app: cpanel-webhook
-    chart: cpanel-webhook-0.1.0
+    chart: cpanel-webhook-0.2.0
     release: cpanel-webhook
     heritage: Helm
 spec:
@@ -216,7 +216,7 @@ spec:
       serviceAccountName: cpanel-webhook
       containers:
         - name: cpanel-webhook
-          image: "jamesorlakin/cert-manager-cpanel-dns-webhook:v0.1.0"
+          image: "jamesorlakin/cert-manager-cpanel-dns-webhook:v0.2.0"
           imagePullPolicy: IfNotPresent
           args:
             - --tls-cert-file=/tls/tls.crt
@@ -256,7 +256,7 @@ metadata:
   name: v1alpha1.jameslakin.co.uk
   labels:
     app: cpanel-webhook
-    chart: cpanel-webhook-0.1.0
+    chart: cpanel-webhook-0.2.0
     release: cpanel-webhook
     heritage: Helm
   annotations:
@@ -279,7 +279,7 @@ metadata:
   namespace: "cert-manager"
   labels:
     app: cpanel-webhook
-    chart: cpanel-webhook-0.1.0
+    chart: cpanel-webhook-0.2.0
     release: cpanel-webhook
     heritage: Helm
 spec:
@@ -299,7 +299,7 @@ metadata:
   namespace: "cert-manager"
   labels:
     app: cpanel-webhook
-    chart: cpanel-webhook-0.1.0
+    chart: cpanel-webhook-0.2.0
     release: cpanel-webhook
     heritage: Helm
 spec:
@@ -322,7 +322,7 @@ metadata:
   namespace: "cert-manager"
   labels:
     app: cpanel-webhook
-    chart: cpanel-webhook-0.1.0
+    chart: cpanel-webhook-0.2.0
     release: cpanel-webhook
     heritage: Helm
 spec:
@@ -337,7 +337,7 @@ metadata:
   namespace: "cert-manager"
   labels:
     app: cpanel-webhook
-    chart: cpanel-webhook-0.1.0
+    chart: cpanel-webhook-0.2.0
     release: cpanel-webhook
     heritage: Helm
 spec:

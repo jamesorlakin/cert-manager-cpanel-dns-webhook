@@ -25,7 +25,7 @@ var GroupName = os.Getenv("GROUP_NAME")
 
 func main() {
 	log.SetLevel(log.DebugLevel)
-	log.Info("cert-manager CPanel webhook solver starting")
+	log.Info("cert-manager CPanel webhook solver starting, v0.2.0")
 	if GroupName == "" {
 		log.Panic("GROUP_NAME must be specified as an environment variable")
 	}

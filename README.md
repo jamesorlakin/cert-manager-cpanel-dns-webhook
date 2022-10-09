@@ -19,7 +19,7 @@ This is based off the [example](https://github.com/cert-manager/webhook-example)
     stringData:
       username: my-cpanel-user
       password: my-cpanel-password
-      # Or, instead of a password, create and use an API token from CPanel's Security section:
+      # Or, instead of a password in v0.2.0+, create and use an API token from CPanel's Security section:
       apiToken: ABCDEF1234567890ABCDEFABCDEF1234567890
     ```
 4. Create an ACME issuer referencing the webhook, e.g.:
