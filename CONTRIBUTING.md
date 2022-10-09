@@ -32,3 +32,4 @@ helm template cpanel-webhook . > ../v0.1.0.yaml
 ```
 
 The version number in `Chart.yaml` as well as the referenced image in `values.yaml` should be changed for every new release.
+It's also probably worth remembering to tweak the linked yaml version within the README as well.
