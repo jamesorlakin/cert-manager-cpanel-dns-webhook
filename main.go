@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	corev1 "k8s.io/api/core/v1"
 	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -47,7 +48,7 @@ type customDNSProviderSolver struct {
 	client *kubernetes.Clientset
 
 	// CPanel requires the zone serial in requests. This value could be sent in two requests concurrently
-	// but only one will win and actually be persisted in the zone file - there's no even an error back from CPanel.
+	// but only one will win and actually be persisted in the zone file - there's not even an error back from CPanel.
 	// We therefore use this mutex to disallow concurrent requests to CPanel if multiple DNS names are given.
 	mutex sync.Mutex
 }
@@ -94,10 +95,10 @@ func (c *customDNSProviderSolver) Name() string {
 // cert-manager itself will later perform a self check to ensure that the
 // solver has correctly configured the DNS provider.
 func (c *customDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
-	log.Infof("Got request to present: %v", ch)
+	log.Infof("Got request to present: %+v", ch)
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	log.Debugf("Presenting %v", ch)
+	log.Debugf("Presenting %+v", ch)
 	cpanel, err := c.getDnsClient(ch)
 	if err != nil {
 		log.Error("Could not get cpanelClient")
@@ -105,7 +106,7 @@ func (c *customDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 	}
 
 	err = cpanel.SetDnsTxt(ch.ResolvedFQDN, ch.Key)
-	log.Debugf("Present complete %v", ch)
+	log.Debugf("Present complete %+v", ch)
 	return err
 }
 
@@ -116,10 +117,10 @@ func (c *customDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 // This is in order to facilitate multiple DNS validations for the same domain
 // concurrently.
 func (c *customDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
-	log.Infof("Got request to clean up: %v", ch)
+	log.Infof("Got request to clean up: %+v", ch)
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	log.Debugf("Deleting %v", ch)
+	log.Debugf("Deleting %+v", ch)
 	cpanel, err := c.getDnsClient(ch)
 	if err != nil {
 		log.Error("Could not get cpanelClient")
@@ -127,7 +128,7 @@ func (c *customDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 	}
 
 	err = cpanel.ClearDnsTxt(ch.ResolvedFQDN, ch.Key)
-	log.Debugf("CleanUp complete %v", ch)
+	log.Debugf("CleanUp complete %+v", ch)
 	return err
 }
 
@@ -158,7 +159,7 @@ func (c *customDNSProviderSolver) getDnsClient(ch *v1alpha1.ChallengeRequest) (*
 		return nil, err
 	}
 
-	log.Infof("Decoded webhook configuration %v", cfg)
+	log.Infof("Decoded webhook configuration %+v", cfg)
 	if cfg.CpanelUrl == "" {
 		return nil, errors.New("dnsZone or cpanelUrl wasn't provided")
 	}
@@ -176,29 +177,37 @@ func (c *customDNSProviderSolver) getDnsClient(ch *v1alpha1.ChallengeRequest) (*
 		return nil, err
 	}
 
+	client, err := CreateClientFromSecretValues(secret, ch.ResolvedZone, cfg.CpanelUrl)
+	return client, err
+}
+
+func CreateClientFromSecretValues(secret *corev1.Secret, dnsZone, cpanelUrl string) (*cpanel.CpanelClient, error) {
 	usernameBytes, ok := secret.Data["username"]
 	if !ok {
 		err := errors.New("username field not present in secret")
 		log.Error(err)
 		return nil, err
 	}
-	passwordBytes, ok := secret.Data["password"]
-	if !ok {
-		err := errors.New("password field not present in secret")
+	passwordBytes, passwordOk := secret.Data["password"]
+	apiTokenBytes, apiOk := secret.Data["apiToken"]
+	if !passwordOk && !apiOk {
+		err := errors.New("password or API token field not present in secret")
 		log.Error(err)
 		return nil, err
 	}
 
 	username := string(usernameBytes)
 	password := string(passwordBytes)
+	apiToken := string(apiTokenBytes)
 
-	log.Info("Got username and password from secret")
+	log.Info("Got credentials from secret")
 
 	cpanel := &cpanel.CpanelClient{
-		DnsZone:   ch.ResolvedZone,
-		CpanelUrl: cfg.CpanelUrl,
+		DnsZone:   dnsZone,
+		CpanelUrl: cpanelUrl,
 		Username:  username,
 		Password:  password,
+		ApiToken:  apiToken,
 	}
 	return cpanel, nil
 }
@@ -212,7 +221,7 @@ func loadConfig(cfgJSON *extapi.JSON) (customDNSProviderConfig, error) {
 		return cfg, nil
 	}
 	if err := json.Unmarshal(cfgJSON.Raw, &cfg); err != nil {
-		return cfg, fmt.Errorf("error decoding solver config: %v", err)
+		return cfg, fmt.Errorf("error decoding solver config: %+v", err)
 	}
 
 	return cfg, nil

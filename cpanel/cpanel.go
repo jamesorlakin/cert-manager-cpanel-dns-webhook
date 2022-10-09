@@ -20,6 +20,7 @@ type CpanelClient struct {
 	CpanelUrl  string
 	Username   string
 	Password   string
+	ApiToken   string // An alternative to a password and takes precedence
 }
 
 func (c *CpanelClient) SetDnsTxt(recordName string, value string) error {
@@ -30,14 +31,11 @@ func (c *CpanelClient) SetDnsTxt(recordName string, value string) error {
 	if err != nil {
 		return err
 	}
-	log.Debug("Got zone")
+	log.Infof("Got zone, record count: %d", len(zone.Data))
 
 	// Get the zone serial as it's needed for mutation
 	serial := getZoneSerial(zone)
 	log.Infof("Got SOA serial %s", serial)
-
-	// st, err := json.Marshal(zone)
-	// os.WriteFile("decode.json", st, 0644)
 
 	// Does the requested record already exist?
 	var existingRecord *cpanelZoneRecord
@@ -109,13 +107,13 @@ func (c *CpanelClient) ClearDnsTxt(recordName string, value string) error {
 }
 
 func (c *CpanelClient) getZoneDetails() (*cpanelZoneResponse, error) {
-	req, err := http.NewRequest("GET", c.CpanelUrl+"/cpsess123/execute/DNS/parse_zone?zone="+url.QueryEscape(c.getDnsZoneNoDot()), nil)
+	req, err := http.NewRequest("GET", c.CpanelUrl+"/execute/DNS/parse_zone?zone="+url.QueryEscape(c.getDnsZoneNoDot()), nil)
 	if err != nil {
 		log.Error("zone info HTTP request error", err)
 		return nil, err
 	}
 
-	req.SetBasicAuth(c.Username, c.Password)
+	c.addRequestAuth(req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -138,7 +136,7 @@ func (c *CpanelClient) getZoneDetails() (*cpanelZoneResponse, error) {
 	}
 
 	if len(zoneResponse.Errors) > 0 {
-		log.Errorf("zone JSON reported errors: %v", zoneResponse.Errors)
+		log.Errorf("zone JSON reported errors: %+v", zoneResponse.Errors)
 		return &zoneResponse, errors.New("zone JSON reported errors")
 	}
 
@@ -174,7 +172,7 @@ func (c *CpanelClient) createZoneRecord(serial string, recordName string, value 
 		return err
 	}
 
-	url := c.CpanelUrl + "/cpsess123/execute/DNS/mass_edit_zone?zone=" + c.getDnsZoneNoDot() + "&serial=" + serial + "&add=" + createJsonEncoded
+	url := c.CpanelUrl + "/execute/DNS/mass_edit_zone?zone=" + c.getDnsZoneNoDot() + "&serial=" + serial + "&add=" + createJsonEncoded
 	log.Debugf("Using URL to create: %s", url)
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -183,7 +181,7 @@ func (c *CpanelClient) createZoneRecord(serial string, recordName string, value 
 		return err
 	}
 
-	req.SetBasicAuth(c.Username, c.Password)
+	c.addRequestAuth(req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -206,7 +204,7 @@ func (c *CpanelClient) createZoneRecord(serial string, recordName string, value 
 	}
 
 	if len(createResponse.Errors) > 0 {
-		log.Errorf("create JSON reported errors: %v", createResponse.Errors)
+		log.Errorf("create JSON reported errors: %+v", createResponse.Errors)
 		return errors.New("create JSON reported errors")
 	}
 
@@ -214,7 +212,7 @@ func (c *CpanelClient) createZoneRecord(serial string, recordName string, value 
 }
 
 func (c *CpanelClient) deleteZoneRecord(serial string, recordLineNo int) error {
-	url := c.CpanelUrl + "/cpsess123/execute/DNS/mass_edit_zone?zone=" + c.getDnsZoneNoDot() + "&serial=" + serial + "&remove=" + strconv.Itoa(recordLineNo)
+	url := c.CpanelUrl + "/execute/DNS/mass_edit_zone?zone=" + c.getDnsZoneNoDot() + "&serial=" + serial + "&remove=" + strconv.Itoa(recordLineNo)
 	log.Debugf("Using URL to delete: %s", url)
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -223,7 +221,7 @@ func (c *CpanelClient) deleteZoneRecord(serial string, recordLineNo int) error {
 		return err
 	}
 
-	req.SetBasicAuth(c.Username, c.Password)
+	c.addRequestAuth(req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -246,7 +244,7 @@ func (c *CpanelClient) deleteZoneRecord(serial string, recordLineNo int) error {
 	}
 
 	if len(createResponse.Errors) > 0 {
-		log.Errorf("delete JSON reported errors: %v", createResponse.Errors)
+		log.Errorf("delete JSON reported errors: %+v", createResponse.Errors)
 		return errors.New("delete JSON reported errors")
 	}
 
@@ -265,6 +263,21 @@ func (c *CpanelClient) getDnsZoneNoDot() string {
 	// CPanel API expects zone of 'my-domain.com', not 'my-domain.com.'
 	return strings.TrimSuffix(c.DnsZone, ".")
 }
+
+// Add either Basic auth for username/password or CPanel's own API Token mechanism
+func (c *CpanelClient) addRequestAuth(req *http.Request) {
+	if c.ApiToken != "" {
+		log.Debug("Using API Token mechanism")
+		req.Header.Add("Authorization", "cpanel "+c.Username+":"+c.ApiToken)
+	} else {
+		log.Debug("No API token, falling back to HTTP Basic auth")
+		req.SetBasicAuth(c.Username, c.Password)
+	}
+}
+
+// ----
+// Utils
+// ----
 
 // Get the SOA serial needed for mutating DNS zones.
 func getZoneSerial(zone *cpanelZoneResponse) string {
