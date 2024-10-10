@@ -16,8 +16,8 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/jamesorlakin/cert-manager-cpanel-dns-webhook/cpanel"
-	"github.com/jetstack/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
-	"github.com/jetstack/cert-manager/pkg/acme/webhook/cmd"
+	"github.com/cert-manager/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
+	"github.com/cert-manager/cert-manager/pkg/acme/webhook/cmd"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -25,7 +25,7 @@ var GroupName = os.Getenv("GROUP_NAME")
 
 func main() {
 	log.SetLevel(log.DebugLevel)
-	log.Info("cert-manager CPanel webhook solver starting, v0.2.0")
+	log.Info("cert-manager CPanel webhook solver starting, v0.3.0")
 	if GroupName == "" {
 		log.Panic("GROUP_NAME must be specified as an environment variable")
 	}
