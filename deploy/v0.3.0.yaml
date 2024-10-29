@@ -1,0 +1,345 @@
+---
+# Source: cpanel-webhook/templates/rbac.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cpanel-webhook
+  namespace: "cert-manager"
+  labels:
+    app: cpanel-webhook
+    chart: cpanel-webhook-0.3.0
+    release: cpanel-webhook
+    heritage: Helm
+---
+# Source: cpanel-webhook/templates/rbac.yaml
+# Grant cert-manager permission to validate using our apiserver
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cpanel-webhook:domain-solver
+  labels:
+    app: cpanel-webhook
+    chart: cpanel-webhook-0.3.0
+    release: cpanel-webhook
+    heritage: Helm
+rules:
+  - apiGroups:
+      - jameslakin.co.uk
+    resources:
+      - '*'
+    verbs:
+      - 'create'
+---
+# Source: cpanel-webhook/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cpanel-webhook:secret-reader
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - "secrets"
+    verbs:
+      - "get"
+---
+# Source: cpanel-webhook/templates/rbac.yaml
+# Grant cpanel-webhook permission to read the flow control mechanism (APF)
+# API Priority and Fairness is enabled by default in Kubernetes 1.20
+# https://kubernetes.io/docs/concepts/cluster-administration/flow-control/
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cpanel-webhook:flowcontrol-solver
+  labels:
+    app: cpanel-webhook
+    chart: cpanel-webhook-0.3.0
+    release: cpanel-webhook
+    heritage: Helm
+rules:
+  - apiGroups:
+      - "flowcontrol.apiserver.k8s.io"
+    resources:
+      - "prioritylevelconfigurations"
+      - "flowschemas"
+    verbs:
+      - "list"
+      - "watch"
+---
+# Source: cpanel-webhook/templates/rbac.yaml
+# apiserver gets the auth-delegator role to delegate auth decisions to
+# the core apiserver
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cpanel-webhook:auth-delegator
+  labels:
+    app: cpanel-webhook
+    chart: cpanel-webhook-0.3.0
+    release: cpanel-webhook
+    heritage: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+  - apiGroup: ""
+    kind: ServiceAccount
+    name: cpanel-webhook
+    namespace: cert-manager
+---
+# Source: cpanel-webhook/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cpanel-webhook:domain-solver
+  labels:
+    app: cpanel-webhook
+    chart: cpanel-webhook-0.3.0
+    release: cpanel-webhook
+    heritage: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cpanel-webhook:domain-solver
+subjects:
+  - apiGroup: ""
+    kind: ServiceAccount
+    name: cert-manager
+    namespace: cert-manager
+---
+# Source: cpanel-webhook/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cpanel-webhook:secret-reader
+  namespace: "cert-manager"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cpanel-webhook:secret-reader
+subjects:
+  - apiGroup: ""
+    kind: ServiceAccount
+    name: cpanel-webhook
+    namespace: "cert-manager"
+---
+# Source: cpanel-webhook/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cpanel-webhook:flowcontrol-solver
+  labels:
+    app: cpanel-webhook
+    chart: cpanel-webhook-0.3.0
+    release: cpanel-webhook
+    heritage: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cpanel-webhook:flowcontrol-solver
+subjects:
+  - apiGroup: ""
+    kind: ServiceAccount
+    name: cpanel-webhook
+    namespace: "cert-manager"
+---
+# Source: cpanel-webhook/templates/rbac.yaml
+# Grant the webhook permission to read the ConfigMap containing the Kubernetes
+# apiserver's requestheader-ca-certificate.
+# This ConfigMap is automatically created by the Kubernetes apiserver.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cpanel-webhook:webhook-authentication-reader
+  namespace: kube-system
+  labels:
+    app: cpanel-webhook
+    chart: cpanel-webhook-0.3.0
+    release: cpanel-webhook
+    heritage: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: extension-apiserver-authentication-reader
+subjects:
+  - apiGroup: ""
+    kind: ServiceAccount
+    name: cpanel-webhook
+    namespace: cert-manager
+---
+# Source: cpanel-webhook/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: cpanel-webhook
+  namespace: "cert-manager"
+  labels:
+    app: cpanel-webhook
+    chart: cpanel-webhook-0.3.0
+    release: cpanel-webhook
+    heritage: Helm
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      targetPort: https
+      protocol: TCP
+      name: https
+  selector:
+    app: cpanel-webhook
+    release: cpanel-webhook
+---
+# Source: cpanel-webhook/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cpanel-webhook
+  namespace: "cert-manager"
+  labels:
+    app: cpanel-webhook
+    chart: cpanel-webhook-0.3.0
+    release: cpanel-webhook
+    heritage: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cpanel-webhook
+      release: cpanel-webhook
+  template:
+    metadata:
+      labels:
+        app: cpanel-webhook
+        release: cpanel-webhook
+    spec:
+      serviceAccountName: cpanel-webhook
+      containers:
+        - name: cpanel-webhook
+          image: "jamesorlakin/cert-manager-cpanel-dns-webhook:v0.3.0"
+          imagePullPolicy: IfNotPresent
+          args:
+            - --tls-cert-file=/tls/tls.crt
+            - --tls-private-key-file=/tls/tls.key
+          env:
+            - name: GROUP_NAME
+              value: "jameslakin.co.uk"
+          ports:
+            - name: https
+              containerPort: 443
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              scheme: HTTPS
+              path: /healthz
+              port: https
+          readinessProbe:
+            httpGet:
+              scheme: HTTPS
+              path: /healthz
+              port: https
+          volumeMounts:
+            - name: certs
+              mountPath: /tls
+              readOnly: true
+          resources:
+            {}
+      volumes:
+        - name: certs
+          secret:
+            secretName: cpanel-webhook-webhook-tls
+---
+# Source: cpanel-webhook/templates/apiservice.yaml
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1alpha1.jameslakin.co.uk
+  labels:
+    app: cpanel-webhook
+    chart: cpanel-webhook-0.3.0
+    release: cpanel-webhook
+    heritage: Helm
+  annotations:
+    cert-manager.io/inject-ca-from: "cert-manager/cpanel-webhook-webhook-tls"
+spec:
+  group: jameslakin.co.uk
+  groupPriorityMinimum: 1000
+  versionPriority: 15
+  service:
+    name: cpanel-webhook
+    namespace: cert-manager
+  version: v1alpha1
+---
+# Source: cpanel-webhook/templates/pki.yaml
+# Generate a CA Certificate used to sign certificates for the webhook
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: cpanel-webhook-ca
+  namespace: "cert-manager"
+  labels:
+    app: cpanel-webhook
+    chart: cpanel-webhook-0.3.0
+    release: cpanel-webhook
+    heritage: Helm
+spec:
+  secretName: cpanel-webhook-ca
+  duration: 43800h # 5y
+  issuerRef:
+    name: cpanel-webhook-selfsign
+  commonName: "ca.cpanel-webhook.cert-manager"
+  isCA: true
+---
+# Source: cpanel-webhook/templates/pki.yaml
+# Finally, generate a serving certificate for the webhook to use
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: cpanel-webhook-webhook-tls
+  namespace: "cert-manager"
+  labels:
+    app: cpanel-webhook
+    chart: cpanel-webhook-0.3.0
+    release: cpanel-webhook
+    heritage: Helm
+spec:
+  secretName: cpanel-webhook-webhook-tls
+  duration: 8760h # 1y
+  issuerRef:
+    name: cpanel-webhook-ca
+  dnsNames:
+  - cpanel-webhook
+  - cpanel-webhook.cert-manager
+  - cpanel-webhook.cert-manager.svc
+---
+# Source: cpanel-webhook/templates/pki.yaml
+# Create a selfsigned Issuer, in order to create a root CA certificate for
+# signing webhook serving certificates
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: cpanel-webhook-selfsign
+  namespace: "cert-manager"
+  labels:
+    app: cpanel-webhook
+    chart: cpanel-webhook-0.3.0
+    release: cpanel-webhook
+    heritage: Helm
+spec:
+  selfSigned: {}
+---
+# Source: cpanel-webhook/templates/pki.yaml
+# Create an Issuer that uses the above generated CA certificate to issue certs
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: cpanel-webhook-ca
+  namespace: "cert-manager"
+  labels:
+    app: cpanel-webhook
+    chart: cpanel-webhook-0.3.0
+    release: cpanel-webhook
+    heritage: Helm
+spec:
+  ca:
+    secretName: cpanel-webhook-ca
